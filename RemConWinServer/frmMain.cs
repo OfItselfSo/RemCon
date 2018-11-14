@@ -209,7 +209,9 @@ namespace RemConWinServer
 
         /// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=
         /// <summary>
-        /// Handles inbound data events
+        /// Handles inbound data events.
+        /// 
+        /// NOTE: You are not on the Main Form Thread here.
         /// </summary>
         /// <history>
         ///    10 Nov 18  Cynic - Started
@@ -221,6 +223,23 @@ namespace RemConWinServer
                 LogMessage("ServerClientDataEventHandler scData==null");
                 return;
             }
+
+            // Ok, you probably already know this but I'll note it here because this is so important
+            // You do NOT want to update any form controls from a thread that is not the forms main
+            // thread. Very odd, intermittent and hard to debug problems will result. Even if your 
+            // handler does not actually update any form controls do not do it! Sooner or later you 
+            // or someone else will make changes that calls something that eventually updates a
+            // form or control and then you will have introduced a really hard to find bug.
+
+            // So, we always use the InvokeRequired...Invoke sequence to get us back on the form thread
+            if (InvokeRequired == true)
+            {
+                // call ourselves again but this time be on the form thread.
+                Invoke(new TCPDataTransporter.ServerClientDataEvent_Delegate(ServerClientDataEventHandler), new object[] { sender, scData });
+                return;
+            }
+
+            // Now we KNOW we are on the main form thread.
 
             // what type of data is it
             if (scData.DataContent == ServerClientDataContentEnum.USER_DATA)
